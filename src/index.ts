@@ -50,16 +50,17 @@ app.post('/generate-site', async (req: Request, res: Response): Promise<any> => 
         const appPath = path.join(TEMP_REPO_PATH, 'src/App.tsx');
         let appContent = fs.readFileSync(appPath, 'utf8');
 
-        // Logic: Replace markers with actual components
-        // Example: selectedComponents = { hero: 'hero_01', nav: 'nav_01' }
+        // Use the markers you actually wrote in App.tsx
+        // Replace Import Marker
         appContent = appContent.replace(
-            /\/\/ @REPLACE_IMPORT_HERO/g, 
-            `import Hero from './component/${selectedComponents.hero}';`
+            /\/\/ --- AUTO_IMPORT_MARKER ---/g, 
+            `// --- AUTO_IMPORT_MARKER ---\nimport Hero from './components/Hero/${selectedComponents.hero}';\nimport Feature from './components/Features/${selectedComponents.feature}';\nimport Gallery from './components/Gallery/${selectedComponents.gallery}';`
         );
-        appContent = appContent.replace(
-            /\{(\/\* @REPLACE_COMPONENT_HERO \*\/)\}/g, 
-            `<Hero />`
-        );
+
+        // Replace Component Slots
+        appContent = appContent.replace(/\{(\/\* --- SLOT_HERO --- \*\/)\}/g, `<Hero config={configData} />`);
+        appContent = appContent.replace(/\{(\/\* --- SLOT_FEATURE --- \*\/)\}/g, `<Feature config={configData} />`);
+        appContent = appContent.replace(/\{(\/\* --- SLOT_GALLERY --- \*\/)\}/g, `<Gallery config={configData} />`);
 
         fs.writeFileSync(appPath, appContent);
 
