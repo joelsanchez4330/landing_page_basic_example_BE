@@ -14,7 +14,7 @@ app.use(express.json());
 // --- CONFIGURATION ---
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const REPO_OWNER = 'joelsanchez4330';
-const REPO_NAME = 'landing_page_basic_example_BE';
+const REPO_NAME = 'landing_page_basic_example_FE';
 const REPO_URL = `https://${GITHUB_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git`;
 const TEMP_REPO_PATH = path.join(process.cwd(), 'temp_build');
 
