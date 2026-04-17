@@ -1,86 +1,44 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-import fs from 'fs';
-import path from 'path';
-import { simpleGit, SimpleGit } from 'simple-git';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
-app.use(express.json());
+// 1. GLOBAL MIDDLEWARE
+app.use(cors()); // Allows your Frontend to talk to this Backend
+app.use(express.json()); // Parses JSON bodies
 
-// --- CONFIGURATION ---
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const REPO_OWNER = 'joelsanchez4330';
-const REPO_NAME = 'landing_page_basic_example_FE';
-const REPO_URL = `https://${GITHUB_TOKEN}@github.com/${REPO_OWNER}/${REPO_NAME}.git`;
-const TEMP_REPO_PATH = path.join(process.cwd(), 'temp_build');
+// 2. HEALTH CHECK (Formality)
+// This is great for checking if your server is running without triggering a build
+app.get('/', (req: Request, res: Response) => {
+    res.json({
+        status: 'online',
+        message: 'Zenith Agency Assembler API is active.',
+        version: '1.0.0'
+    });
+});
 
-const git: SimpleGit = simpleGit();
+// 3. THE TRIGGER ENDPOINT (Simplified)
+// We keep this here so your Frontend has a place to send the data.
+app.post('/api/build', (req: Request, res: Response) => {
+    const { clientName } = req.body;
+    
+    console.log(`Incoming build request for: ${clientName}`);
 
-app.post('/generate-site', async (req: Request, res: Response): Promise<any> => {
-    const { clientName, selectedComponents, siteConfig } = req.body;
+    // If you don't want to use a Webhook yet, you can just log it.
+    // But usually, you'd trigger n8n here.
+    res.status(202).json({
+        message: 'Request received. Processing via n8n automation.',
+        timestamp: new Date().toISOString()
+    });
+});
 
-    if (!clientName || !selectedComponents || !siteConfig) {
-        return res.status(400).json({ error: 'Missing required data: clientName, selectedComponents, or siteConfig' });
-    }
-
-    try {
-        // 1. Clean up old temp folder if it exists
-        if (fs.existsSync(TEMP_REPO_PATH)) {
-            fs.rmSync(TEMP_REPO_PATH, { recursive: true, force: true });
-        }
-
-        // 2. Clone the core template
-        console.log(`Cloning template for ${clientName}...`);
-        await git.clone(REPO_URL, TEMP_REPO_PATH);
-        const clientGit: SimpleGit = simpleGit(TEMP_REPO_PATH);
-
-        // 3. Create a new branch for the client
-        const branchName = `deploy/${clientName.toLowerCase().replace(/\s+/g, '-')}`;
-        await clientGit.checkoutLocalBranch(branchName);
-
-        // 4. Update site-config.json
-        const configPath = path.join(TEMP_REPO_PATH, 'src/data/site-config.json');
-        fs.writeFileSync(configPath, JSON.stringify(siteConfig, null, 2));
-
-        // 5. Update App.tsx (The "Assembly")
-        const appPath = path.join(TEMP_REPO_PATH, 'src/App.tsx');
-        let appContent = fs.readFileSync(appPath, 'utf8');
-
-        // MATCHING YOUR APP.TSX MARKERS EXACTLY:
-        // 1. Replace the Import Marker
-        appContent = appContent.replace(
-            /\/\/ --- AUTO_IMPORT_MARKER ---/g, 
-            `// --- AUTO_IMPORT_MARKER ---\nimport Hero from './components/Hero/${selectedComponents.hero}';\nimport Feature from './components/Features/${selectedComponents.feature}';\nimport Gallery from './components/Gallery/${selectedComponents.gallery}';`
-        );
-
-        // 2. Replace the Component Markers (The @REPLACE style you have in App.tsx)
-        appContent = appContent.replace(/\{(\/\* @REPLACE_COMPONENT_HERO \*\/)\}/g, `<Hero config={configData} />`);
-        appContent = appContent.replace(/\{(\/\* @REPLACE_COMPONENT_FEATURE \*\/)\}/g, `<Feature config={configData} />`);
-        appContent = appContent.replace(/\{(\/\* @REPLACE_COMPONENT_GALLERY \*\/)\}/g, `<Gallery config={configData} />`);
-
-        fs.writeFileSync(appPath, appContent);
-
-        // 6. Push to GitHub
-        await clientGit.add('.');
-        await clientGit.commit(`Build for ${clientName}`);
-        await clientGit.push('origin', branchName);
-
-        res.json({ 
-            success: true, 
-            message: `Site generated on branch ${branchName}`,
-            branch: branchName 
-        });
-
-    } catch (error: any) {
-        console.error('Build Error:', error);
-        res.status(500).json({ error: 'Failed to generate site', details: error.message });
-    }
+// 4. ERROR HANDLING
+app.use((req: Request, res: Response) => {
+    res.status(404).json({ error: 'Route not found' });
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Agency Assembler running on http://localhost:${PORT}`);
+    console.log(`🚀 Formal BE running on http://localhost:${PORT}`);
 });
